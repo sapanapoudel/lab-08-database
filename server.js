@@ -220,7 +220,7 @@ function getEventRoute(request, response) {
 //==============movies=======================
 //movies constructor 
 function Movie(movie) {
-  // this.tableName = 'movies'
+  this.tableName = 'movies'
   this.title = movie.title;
   this.overview = movie.overview;
   this.average_votes = movie.vote_average;
@@ -258,6 +258,7 @@ function getMovies(request, response) {
         .then(result => {
           const movieSummary = result.body.results.map(movieData => {
             const summary = new Movie(movieData);
+            summary.save(request.query.data.id);
             return summary;
           });
 
