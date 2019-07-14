@@ -26,6 +26,8 @@ app.get('/location', getLocation);
 app.get('/weather', getWeatherRoute);
 //Event Route
 app.get('/events', getEventRoute);
+//Movie Route
+app.get('/movies', getMovies);
 
 app.use('*', (request, response) => response.send('you got to the wrong place'));
 
@@ -213,5 +215,55 @@ function getEventRoute(request, response) {
         .catch(error => handleError(error, response)); 
     }
   })
+}
 
+//==============movies=======================
+//movies constructor 
+function Movie(movie) {
+  // this.tableName = 'movies'
+  this.title = movie.title;
+  this.overview = movie.overview;
+  this.average_votes = movie.vote_average;
+  this.total_votes = movie.vote_count;
+  this.image_url = 'https://image.tmdb.org/t/p/w500' + movie.poster_path;
+  this.popularity = movie.popularity;
+  this.released_on = movie.released_date;
+}
+
+Movie.tableName = 'movies';
+Movie.lookup = lookup;
+
+Movie.prototype = {
+  save: function (location_id) {
+    const SQL = `INSERT INTO ${this.tableName} (title, overview, average_votes, total_votes, image_url, popularity, released_on, location_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8);`;
+    const values = [this.title, this.overview, this.average_votes, this.total_votes, this.image_url, this.popularity, this.released_on, location_id];
+
+    client.query(SQL, values);
+  }
+}
+function getMovies(request, response) {
+  Movie.lookup ({
+    tableName: Movie.tableName,
+    location: request.query.data.id,
+
+    cacheHit: function(result) {
+      response.send(result.rows);
+    },
+
+    cacheMiss: function() {
+      const locationName = request.query.data.search_query;
+      const url = `https://api.themoviedb.org/3/search/movie?api_key=${process.env.MOVIE_API_KEY}&language=en-US&query=${locationName}&page=1&include_adult=false`;
+
+      superagent.get(url)
+        .then(result => {
+          const movieSummary = result.body.results.map(movieData => {
+            const summary = new Movie(movieData);
+            return summary;
+          });
+
+          response.send(movieSummary);
+        })
+        .catch(error => handleError(error, response));
+    }
+  });
 }
